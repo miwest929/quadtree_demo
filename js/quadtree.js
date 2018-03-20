@@ -23,7 +23,7 @@ QuadTree.prototype.insert = function(pt) {
     return false;
   }
 
-  if (this.points.length < this.MAX_POINTS_PER_NODE) {
+  if (this.points.length < this.MAX_POINTS_PER_NODE && this.topLeftTree == null) {
     this.points.push(pt);
     return true;
   }
@@ -82,6 +82,112 @@ QuadTree.prototype.subdivide = function() {
     var newBottomRightPt = new Point(this.bottomRightPt.x, this.bottomRightPt.y);
     this.bottomRightTree = new QuadTree(newTopLeftPt, newBottomRightPt);
   }
+}
+
+QuadTree.prototype.findIndexOfPt = function(pt) {
+  var foundIndex = -1;
+  for (var ptIdx = 0; ptIdx < this.points.length; ptIdx++) {
+    if (this.points[ptIdx].x == pt.x && this.points[ptIdx].y == pt.y) {
+      foundIndex = ptIdx
+    }
+  }
+
+  return foundIndex;
+}
+
+QuadTree.prototype.quadTreeForPt = function(pt) {
+  if (!this.inBoundary(pt)) {
+    return null;
+  }
+
+  // Is pt in current quadTree?
+  var foundIndex = this.findIndexOfPt(pt);
+  if (foundIndex !== -1) {
+    return this;
+  }
+
+  if ((this.topLeftPt.x + this.bottomRightPt.x) / 2 >= pt.x) {
+    if ((this.topLeftPt.y + this.bottomRightPt.y) / 2 >= pt.y) {
+      // top left
+      if (this.topLeftTree == null) {
+        return null;
+      }
+
+      return this.topLeftTree.quadTreeForPt(pt);
+    } else {
+      // bottom left
+      if (this.bottomLeftTree == null) {
+        return null;
+      }
+
+      return this.bottomLeftTree.quadTreeForPt(pt);
+    }
+  } else {
+    if ((this.topLeftPt.y + this.bottomRightPt.y) / 2 >= pt.y) {
+      // top right
+      if (this.topRightTree == null) {
+        return null;
+      }
+
+      return this.topRightTree.quadTreeForPt(pt);
+    } else {
+      // bottom right
+      if (this.bottomRightTree == null) {
+        return null;
+      }
+
+      return this.bottomRightTree.quadTreeForPt(pt);
+    }
+  }
+
+  return null;
+}
+
+// returns [Bool]. Returns true if successfully remove given pt from Quadtree. false otherwise
+QuadTree.prototype.remove = function(pt) {
+  var tree = this.quadTreeForPt(pt);
+
+  if (tree === null) {
+    return false;
+  }
+
+  // delete
+  var ptIndex = this.findIndexOfPt(pt);
+  if (ptIndex === -1) {
+    return false;
+  }
+
+  this.points.splice(ptIndex, 1);
+  return true;
+}
+
+QuadTree.prototype.neighbors = function(pt) {
+  // Will return null if pt is not within bounds of current QuadTree
+  var tree = this.quadTreeForPt(pt);
+
+  if (tree == null) {
+    return [];
+  }
+
+  var pts = tree.points;
+
+  if (this.topLeftTree) {
+    pts.concat( this.topLeftTree.neighbors(pt) );
+  }
+
+  if (this.topRightTree) {
+    pts.concat( this.topRightTree.neighbors(pt) );
+  }
+
+  if (this.bottomLeftTree) {
+    pts.concat( this.bottomLeftTree.neighbors(pt) );
+  }
+
+  if (this.bottomRightTree) {
+    pts.concat( this.bottomRightTree.neighbors(pt) );
+  }
+
+  return pts;
 }
 
 QuadTree.prototype.inBoundary = function(pt) {

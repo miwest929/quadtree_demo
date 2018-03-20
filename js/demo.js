@@ -7,9 +7,7 @@ function getRandomInt(min, max) {
 }
 
 var Ball = function(x, y, velocX, velocY) {
-  this.x = x;
-  this.y = y;
-
+  this.pt = new Point(x, y);
   this.velocityX = velocX;
   this.velocityY = velocY;
 }
@@ -28,40 +26,24 @@ Ball.prototype.reflectY = function() {
 }
 
 Ball.prototype.collidesWith = function(otherBall) {
-  var nextX = this.x + this.velocityX;
-  var nextY = this.y + this.velocityY;
+  var diffX = Math.abs(this.pt.x - otherBall.pt.x);
+  var diffY = Math.abs(this.pt.y - otherBall.pt.y);
 
-  var diffX = Math.abs(this.x - otherBall.x);
-  var diffY = Math.abs(this.y - otherBall.y);
   if (diffX <= 1 && diffY <= 1) {
     return true;
   }
 
   return false;
-    // If one rectangle is on left side of other
-    /*if (nextX > otherBall.x+1 || nextX+1 > otherBall.x) {
-        return false;
-    }
-    // If one rectangle is above other
-    if (nextY < otherBall.y+1 || nextY+1 < otherBall.y) {
-        return false;
-    }
-    return true;
-*/
-/*
-  nX-----nX+1
-      oX----oX+1
-*/
 }
 
 Ball.prototype.update = function() {
-  this.x += this.velocityX;
-  this.y += this.velocityY;
+  this.pt.x += this.velocityX;
+  this.pt.y += this.velocityY;
 }
 
 Ball.prototype.render = function(ctx) {
   ctx.fillStyle = "red";
-  ctx.fillRect(this.x, this.y, 2, 2);
+  ctx.fillRect(this.pt.x, this.pt.y, 1, 1);
 }
 
 var quadTree = new QuadTree(
@@ -95,6 +77,11 @@ var render = function() {
 
   // Check for collisions
   for (var bIdx = 0; bIdx < balls.length; bIdx++) {
+  /*  var neighborhood = quadTree.neighbors(new Point(balls[bIdx].x, balls[bIdx].y));
+    if (neighborhood.length == 0) {
+      neighborhood = balls;
+    }*/
+
     for (var idx = 0; idx < balls.length; idx++) {
       if (bIdx != idx && balls[bIdx].collidesWith(balls[idx])) {
         balls[bIdx].reverseVelocity();
@@ -112,9 +99,15 @@ var render = function() {
 
   // Next frame
   for (var bIdx = 0; bIdx < balls.length; bIdx++) {
+    oldPt = balls[bIdx].pt;
     balls[bIdx].update();
 
     // update point in quadTree
+    quadTree.remove(oldPt);
+    var success = quadTree.insert(balls[bIdx].pt);
+    if (!success) {
+      console.log("Failed to reinsert pt ("+balls[bIdx].pt.x+","+balls[bIdx].pt.y+")");
+    }
   }
 }
 
